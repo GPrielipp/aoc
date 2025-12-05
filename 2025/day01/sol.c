@@ -85,6 +85,8 @@ int main(int argc, char* argv[]) {
     free(inst);
   } 
 
+  fclose(file);
+
   printf("part1: %d\n", sol->p1);
   printf("part2: %d\n", sol->p2);
 
