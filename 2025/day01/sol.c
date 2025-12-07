@@ -87,8 +87,8 @@ int main(int argc, char* argv[]) {
 
   fclose(file);
 
-  printf("part1: %d\n", sol->p1);
-  printf("part2: %d\n", sol->p2);
+  printf("part1: %lld\n", sol->p1);
+  printf("part2: %lld\n", sol->p2);
 
   return 0;
 }
