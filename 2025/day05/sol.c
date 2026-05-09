@@ -20,7 +20,7 @@ range_t* new_range(range_t* range, unsigned long min, unsigned long max)
 
 void free_range(range_t* range) {
   if(range == NULL) return;
-  
+
   range_t* next = range->next;
   free(range);
   free_range(next);
@@ -44,53 +44,6 @@ char peek(FILE* file) {
   return c;
 }
 
-// using a Binary search tree - because I don't know how to write a hash function :)
-// Define a structure for a binary tree node
-struct Node
-{
-    unsigned long key;
-    struct Node *left, *right;
-};
-
-// Function to create a new node with a given value
-struct Node *newNodeCreate(unsigned long value)
-{
-    struct Node *temp = (struct Node *)malloc(sizeof(struct Node));
-    temp->key = value;
-    temp->left = temp->right = NULL;
-    return temp;
-}
-
-// Function to search for a node with a specific key in the tree
-struct Node *searchNode(struct Node *root, unsigned long target)
-{
-    if (root == NULL || root->key == target)
-        return root;
-    if (root->key < target)
-        return searchNode(root->right, target);
-    return searchNode(root->left, target);
-}
-
-// Function to insert a node with a specific value in the tree
-struct Node *insertNode(struct Node *node, unsigned long value)
-{
-    if (node == NULL)
-        return newNodeCreate(value);
-    if (value < node->key)
-        node->left = insertNode(node->left, value);
-    else if (value > node->key)
-        node->right = insertNode(node->right, value);
-    return node;
-}
-
-void free_tree(struct Node *node) 
-{
-  if(node == NULL) return;
-  free_tree(node->left);
-  free_tree(node->right);
-  free(node);
-}
-
 void solve(FILE* file, sol_t* sol) {
   range_t *RANGE = NULL;
   //stage 1 -> read the ranges
@@ -98,7 +51,7 @@ void solve(FILE* file, sol_t* sol) {
   while(!feof(file) && peek(file) != '\n') 
   {
     fscanf(file, "%lu-%lu%*1[\n]", &min, &max);
-    printf("read: %lu-%lu\n", min, max);
+    /*printf("read: %lu-%lu\n", min, max);*/
     RANGE = new_range(RANGE, min, max);
   }
 
@@ -109,7 +62,7 @@ void solve(FILE* file, sol_t* sol) {
   unsigned long item;
   while(!feof(file)) {
     fscanf(file, "%lu", &item);
-    
+
     if(check_range(RANGE, item)) {
       //printf("in range: %d\n", item);
       sol->p1++;
@@ -117,20 +70,50 @@ void solve(FILE* file, sol_t* sol) {
   }
 
   // stage 3 -> count how many fresh ID's there are
-  range_t *iter = RANGE;
-  struct Node *set = NULL; 
-  while(iter != NULL) {
-    for(unsigned long i = iter->min; i <= iter->max; i++) {
-      if(i >= ULONG_MAX) { printf("%lu is too big\n", i); }
-      else if(searchNode(set, i) == NULL) {
-        //printf("%lu not in set\n", i);
-        sol->p2++;
-        set = insertNode(set, i);
+  int merge_count = 0; 
+  int prev_merge_count = -1;
+  while(merge_count != prev_merge_count) {
+    prev_merge_count = merge_count;
+    merge_count = 0;
+
+    range_t *i1 = RANGE;
+    range_t *i2 = RANGE->next;
+
+    // new ranges
+    range_t* newRange = NULL;
+    while(i1 != NULL) {
+      unsigned long min = i1->min, max = i1->max;
+      while(i2 != NULL) {
+        if((i2->min >= min && i2->min <= max) ||
+            (i2->max >= min && i2->max <= max))
+        {
+          min = i2->min < min ? i2->min : min;
+          max = i2->max > max ? i2->max : max;
+        }
+
+        i2 = i2->next;
+      } 
+
+      if(!check_range(newRange, min) || !check_range(newRange, max))
+      {
+        newRange = new_range(newRange, min, max); 
+        merge_count++;
       }
+
+      i1 = i1->next;
     }
+    free_range(RANGE);
+    RANGE = newRange; 
+  } 
+
+  // count the ID's
+  range_t *iter = RANGE;
+  while(iter != NULL)
+  {
+    printf("new range: %lu - %lu\n", iter->min, iter->max);
+    sol->p2 += iter->max - iter->min + 1;
     iter = iter->next;
   }
-  free_tree(set);
 
   free_range(RANGE);
 }
@@ -148,15 +131,15 @@ int main(int argc, char* argv[]) {
     exit(1);
   }
 
-  printf("ULONG MAX = %lu\n", ULONG_MAX);
+  /*printf("ULONG MAX = %lu\n", ULONG_MAX);*/
 
   sol_t* sol = new_sol();
   solve(file, sol);
   fclose(file);
-  
+
   printf("part1: %lld\n", sol->p1);
   printf("part2: %lld\n", sol->p2);
-  
+
   free(sol);
 
   return 0;
